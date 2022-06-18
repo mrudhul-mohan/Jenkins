@@ -1,0 +1,46 @@
+pipeline {
+
+    // This pipeline requires could(azure) credentils to be ceated first in the jenkins.
+
+    parameters {
+        string(name: 'registry_param', defaultValue: 'bddevcr.azurecr.io', description: 'Azure container registry')
+    }
+
+    environment {
+        registry = "https://${registry_param}"
+        registry_image_repo = "${registry_param}/"
+        registryCredential = 'azure_registry_cred'
+        imagename = 'consult.dev.bestdocapp.in'
+        dockerImage = ''
+
+    }
+
+    agent any
+    stages {
+        stage('checkout') {
+            
+            steps {
+               checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[credentialsId: 'code-commit-bestdoc-dev', url: 'https://git-codecommit.ap-south-1.amazonaws.com/v1/repos/consult.dev.bestdocapp.in']]])
+            }
+        }
+        
+        stage('Building image') {
+      steps{
+        script {
+          dockerImage = docker.build imagename + ":$BUILD_NUMBER"
+        }
+      }
+    }
+        
+        stage('Deploy Image') {
+      steps{
+        script {
+          docker.withRegistry(registry, registryCredential ) {
+            dockerImage.push()
+                        }
+                    }
+            }
+        }
+    
+    }
+}
